@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import sys
 
 from pyrogram import idle
 from pytgcalls.exceptions import NoActiveGroupCall
@@ -14,49 +15,50 @@ from config import BANNED_USERS
 
 
 async def init():
-    if (
-        not config.STRING1
-        and not config.STRING2
-        and not config.STRING3
-        and not config.STRING4
-        and not config.STRING5
-    ):
+    if not any([config.STRING1, config.STRING2, config.STRING3, config.STRING4, config.STRING5]):
         LOGGER(__name__).error("Assistant client variables not defined, exiting...")
-        exit()
+        sys.exit(1)
+
     await sudo()
+    
     try:
         users = await get_gbanned()
-        for user_id in users:
-            BANNED_USERS.add(user_id)
+        BANNED_USERS.update(users)
+
         users = await get_banned_users()
-        for user_id in users:
-            BANNED_USERS.add(user_id)
-    except:
-        pass
+        BANNED_USERS.update(users)
+    except Exception as e:
+        LOGGER("MausamMusic").warning(f"Failed to fetch banned users: {e}")
+
     await app.start()
+
     for all_module in ALL_MODULES:
-        importlib.import_module("MausamMusic.plugins" + all_module)
+        importlib.import_module(f"MausamMusic.plugins.{all_module}")
+
     LOGGER("MausamMusic.plugins").info("Successfully Imported Modules...")
+
     await userbot.start()
     await Mausam.start()
+
     try:
         await Mausam.stream_call("https://te.legra.ph/file/29f784eb49d230ab62e9e.mp4")
     except NoActiveGroupCall:
-        LOGGER("MausamMusic").error(
-            "Please turn on the videochat of your log group\channel.\n\nStopping Bot..."
-        )
-        exit()
-    except:
-        pass
+        LOGGER("MausamMusic").error("Please turn on the video chat in your log group/channel.\n\nStopping Bot...")
+        sys.exit(1)
+    except Exception as e:
+        LOGGER("MausamMusic").warning(f"Failed to start stream call: {e}")
+
     await Mausam.decorators()
-    LOGGER("MausamMusic").info(
-        "AsmMusix Started Successfully.\n\nDon't forget to visit @MausamMods"
-    )
+    
+    LOGGER("MausamMusic").info("MausamMusic Started Successfully.\n\nDon't forget to visit @MausamMods")
+
     await idle()
+
     await app.stop()
     await userbot.stop()
+
     LOGGER("MausamMusic").info("Stopping Mausam Music Bot...")
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(init())
+    asyncio.run(init())
